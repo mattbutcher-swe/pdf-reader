@@ -1,0 +1,197 @@
+export {};
+<script setup lang="ts">
+import { onMounted, ref, useTemplateRef } from 'vue';
+import SettingsMenu from '../components/SettingsMenu.vue';
+import BookListItem from '../components/BookListItem.vue';
+
+const pdfs = ref<Object[]>([]);
+const currentFolder = ref<String>("");
+const vcardVariant = "flat";
+
+function observeFadeOutOnScroll() {
+  const container = document.getElementById('book-grid');
+  const bookItems = container.querySelectorAll('.book-wrapper');
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.remove('fade-out');
+        } else {
+          entry.target.classList.add('fade-out');
+        }
+      });
+    },
+    {
+      root: container,
+      threshold: 0.1, // Trigger fade when 10% of item is visible
+    }
+  );
+
+  bookItems.forEach(item => observer.observe(item));
+}
+
+
+
+const fetchPDFs = async () => {
+  const home = await window.electronAPI.getHome();
+  return await window.electronAPI.getFoldersPDFs(home);
+}
+
+const setPDFs = async () => {
+  pdfs.value = await fetchPDFs();
+  currentFolder.value = await window.electronAPI.getHome();
+}
+
+function getNextOutOfViewItem(container) {
+  const children = container.querySelectorAll('.book-wrapper');
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const childRect = child.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Check if the element is below the visible area (for vertical scrolling)
+    if (childRect.top > containerRect.bottom || childRect.bottom > containerRect.bottom) {
+      return child;
+    }
+
+    // For horizontal scrolling, use:
+    // if (childRect.left > containerRect.right || childRect.right > containerRect.right) {
+    //   return child;
+    // }
+  }
+
+  return null; // All items are in view
+}
+
+function getPreviousOutOfViewItem(container, selector = '.book-wrapper') {
+  const children = Array.from(container.querySelectorAll(selector));
+  const scrollTop = container.scrollTop;
+
+  for (let i = children.length - 1; i >= 0; i--) {
+    const child = children[i];
+    const offsetTop = child.offsetTop;
+
+    // If the item's bottom is above the visible top of the container
+    if (child.offsetTop < scrollTop) {
+      return child;
+    }
+  }
+
+  return null; // Nothing out of view above
+}
+
+function scrollDown() {
+  const container = document.getElementById('book-grid');
+  const nextItem = getNextOutOfViewItem(container);
+
+  if (nextItem) {
+    nextItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  }
+
+  observeFadeOutOnScroll(); // Run after DOM is updated
+
+
+}
+
+function scrollUp() {
+  const container = document.getElementById('book-grid');
+  const nextItem = getPreviousOutOfViewItem(container);
+
+  if (nextItem) {
+    nextItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  observeFadeOutOnScroll(); // Run after DOM is updated
+
+
+
+}
+
+function scrollProxy(e: WheelEvent | TouchEvent | KeyboardEvent) {
+  e.preventDefault();
+
+  if ('deltaY' in e) {
+    const wheel = e as WheelEvent;
+    if (wheel.deltaY > 0) {
+      scrollDown();
+    } else if (wheel.deltaY < 0) {
+      scrollUp();
+    }
+  }
+
+}
+
+
+setPDFs();
+
+</script>
+
+<template>
+  <main>
+    <v-card class="h-screen d-flex flex-column" :variant="vcardVariant">
+      <div class="d-flex justify-end settings-wrapper pa-7">
+        <SettingsMenu />
+      </div>
+      <v-container class="d-flex justify-center">
+        <div class="align-center">
+          <v-icon
+          @click="scrollUp"
+          icon="mdi-arrow-up"
+          start
+          class="text-primary"
+          id="scroll-up-btn"
+        ></v-icon>
+        </div>
+      </v-container>
+
+      <!-- Book Grid -->
+      <v-container class="flex-grow-1 overflow-y-auto pa-2" @wheel.prevent="scrollProxy" id="book-grid" fluid>
+        <v-row class="h-100 book-wrapper-row" no-gutters>
+          <v-col class="book-wrapper pa-5 h-50" v-for="(item, index) in pdfs" :key="index" cols="12" sm="6" md="4"  lg="3">
+            <div class="h-100 w-100">
+              <BookListItem :bookDetails="item" :currentFolder="currentFolder" />
+            </div>
+          </v-col>
+        </v-row>
+      </v-container>
+      <v-container class="d-flex justify-center">
+        <v-icon
+          @click="scrollDown"
+          icon="mdi-arrow-down"
+          start
+          class="text-primary"
+          id="scroll-down-btn"
+
+        ></v-icon>
+      </v-container>
+    </v-card>
+
+    
+  </main>
+</template>
+
+
+<style scoped>
+  .book-wrapper {
+  opacity: 1;
+  transition: opacity 5s ease;
+}
+
+.book-wrapper.fade-out {
+  opacity: 0; /* or 0 for complete fade-out */
+}
+
+#book-grid {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+}
+#book-grid::-webkit-scrollbar { 
+    display: none;  /* Safari and Chrome */
+}
+
+
+</style>
+

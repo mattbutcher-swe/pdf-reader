@@ -1,0 +1,28 @@
+<!-- pdf-thumbnail-viewer.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    embed {
+      width: 50%;
+      /* height: 100%; */
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <embed id="pdf" type="application/pdf">
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pdfUrl = decodeURIComponent(urlParams.get('pdfUrl'));
+    const page = urlParams.get('page') || 1;
+    document.getElementById('pdf').src = `${pdfUrl}#page=${page}&zoom=150`;
+  </script>
+</body>
+</html>

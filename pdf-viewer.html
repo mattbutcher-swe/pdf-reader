@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title></title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #121212;
+      color: #ffffff;
+    }
+  
+    #topMenu,
+    #toolbar {
+      background: #1E1E1E;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #2c2c2c;
+      position: relative;
+      z-index: 10;
+    }
+  
+    #backButton,
+    #openToc,
+    #prevPage,
+    #nextPage,
+    #zoomIn,
+    #zoomOut,
+    #closeToc {
+      padding: 6px 12px;
+      cursor: pointer;
+      background: #1E1E1E;
+      color: #BB86FC;
+      border: 1px solid #2c2c2c;
+    }
+  
+    #backButton:hover,
+    #openToc:hover,
+    #prevPage:hover,
+    #nextPage:hover,
+    #zoomIn:hover,
+    #zoomOut:hover,
+    #closeToc:hover {
+      background: #2a2a2a;
+    }
+  
+    #content {
+      display: flex;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+  
+    #toc {
+      width: 0;
+      overflow: hidden;
+      background: #1E1E1E;
+      border-right: 1px solid #2c2c2c;
+      padding: 0;
+      transition: width 0.3s ease, padding 0.3s ease;
+    }
+  
+    #toc.expanded {
+      width: 250px;
+      padding: 10px;
+      overflow-y: auto;
+    }
+  
+    #tocContentWrapper {
+      padding-top: 40px;
+    }
+  
+    #toc h3 {
+      color: #BB86FC;
+    }
+  
+    #toc ul {
+      list-style: none;
+      padding-left: 10px;
+    }
+  
+    #toc li {
+      margin-bottom: 5px;
+    }
+  
+    #toc a {
+      text-decoration: none;
+      color: #03DAC6;
+      font-size: 14px;
+    }
+  
+    #toc a:hover {
+      text-decoration: underline;
+    }
+  
+    #closeTocWrapper {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      padding: 4px 10px;
+    }
+  
+    #main {
+      flex-grow: 1;
+      position: relative;
+      height: 100%;
+    }
+  
+    #viewerContainer {
+      position: absolute;
+      top: 90px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow: auto;
+    }
+  
+    .pdfViewer {
+      width: 100%;
+      height: auto;
+      padding: 10px;
+      box-sizing: border-box;
+      background-color: #121212;
+    }
+  
+    .pdfViewer .page {
+      background: #1E1E1E;
+      border: none;
+      border-bottom: 10px solid #121212;
+      margin-bottom: 10px;
+      box-shadow: none;
+    }
+  
+    .pdfViewer .page:last-child {
+      border-bottom: none;
+    }
+  
+    span {
+      font-weight: bold;
+      color: #ffffff;
+    }
+  </style>
+  
+</head>
+<body>
+  <div id="topMenu">
+    <button id="backButton">Back</button>
+  </div>
+  <div id="content">
+    <div id="toc">
+      <div class="closeTocWrapper">
+        <button id="closeToc">Close</button>
+      </div>
+      <div id="tocContentWrapper">
+        <h3>Table of Contents</h3>
+        <div id="tocContent">Loading...</div>
+      </div>
+    </div>
+    <div id="main">
+      <div id="toolbar">
+        <button id="openToc">TOC</button>
+        <button id="prevPage">Previous</button>
+        <button id="nextPage">Next</button>
+        <span>Page: <span id="currentPage">1</span> / <span id="totalPages">?</span></span>
+        <button id="zoomOut">-</button>
+        <button id="zoomIn">+</button>
+      </div>
+      <div id="viewerContainer">
+        <div id="pdfViewer" class="pdfViewer"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Get PDF URL from query parameter
+    console.log(window.location);
+    const urlParams = new URLSearchParams(window.location.search);
+    const url = decodeURIComponent(urlParams.get('pdfUrl') || '');
+
+    const encodedPdfUrl = urlParams.get("pdfUrl");
+const decodedPdfUrl = decodeURIComponent(encodedPdfUrl || '');
+
+// Step 2: Extract the page number from the decoded URL's hash
+const pageMatch = decodedPdfUrl.match(/[#&?]page=(\d+)/);
+const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
+    // For testing, you can uncomment the line below with a sample PDF
+    // const url = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey.pdf';
+
+    // Set PDF.js worker source
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Initialize PDF.js viewer
+    const eventBus = new pdfjsViewer.EventBus();
+    
+    // Set up link service for in-PDF links
+    const linkService = new pdfjsViewer.PDFLinkService({
+      eventBus: eventBus,
+    });
+
+    const pdfViewer = new pdfjsViewer.PDFViewer({
+      container: document.getElementById('viewerContainer'),
+      eventBus: eventBus,
+      linkService: linkService,
+      textLayerMode: 2,
+      annotationMode: 2,
+      enableScripting: true,
+    });
+
+    linkService.setViewer(pdfViewer);
+
+    let pdfDoc = null;
+
+    console.log(pageNumber);
+
+    let currentPage = pageNumber;
+    let currentScale = 1.5;
+
+    const currentPageDisplay = document.getElementById('currentPage');
+    const totalPagesDisplay = document.getElementById('totalPages');
+
+    // Load the PDF
+    if (url) {
+      pdfjsLib.getDocument(url).promise.then(doc => {
+        pdfDoc = doc;
+        totalPagesDisplay.textContent = pdfDoc.numPages;
+
+        pdfViewer.setDocument(pdfDoc);
+        pdfViewer.currentPageNumber  = pageNumber;
+
+        linkService.setDocument(pdfDoc);
+        pdfViewer.currentScale = currentScale;
+        currentPageDisplay.textContent = currentPage;
+
+        eventBus.on('pagesinit', () => {
+          pdfViewer.currentPageNumber = pageNumber;
+          currentPageDisplay.textContent = pageNumber;
+        });
+
+        // Load and render the table of contents
+        doc.getOutline().then(outline => {
+          const tocContainer = document.getElementById('tocContent');
+          if (!outline || outline.length === 0) {
+            tocContainer.textContent = 'No bookmarks found.';
+            return;
+          }
+          tocContainer.innerHTML = '';
+          buildTOC(outline).then(toc => tocContainer.appendChild(toc));
+        }).catch(err => {
+          console.error('Error loading outline:', err);
+          document.getElementById('tocContent').textContent = 'Error loading TOC.';
+        });
+      }).catch(err => {
+        console.error('Error loading PDF:', err);
+      });
+    } else {
+      document.getElementById('pdfViewer').textContent = 'No PDF URL provided.';
+    }
+
+    // Update page number on change
+    eventBus.on('pagechanging', e => {
+      currentPage = e.pageNumber;
+      currentPageDisplay.textContent = currentPage;
+    });
+
+    // Handle link clicks for in-PDF annotations
+    eventBus.on('linkclicked', async (e) => {
+      try {
+        const { dest, url } = e;
+        if (url) {
+          window.open(url, '_blank');
+          return;
+        }
+        if (dest) {
+          let pageIndex;
+          if (typeof dest === 'string') {
+            const resolvedDest = await pdfDoc.getDestination(dest);
+            if (resolvedDest && Array.isArray(resolvedDest) && resolvedDest[0]) {
+              pageIndex = await pdfDoc.getPageIndex(resolvedDest[0]);
+            } else {
+              console.warn('Invalid string destination:', dest);
+              return;
+            }
+          } else if (Array.isArray(dest) && dest[0]) {
+            pageIndex = await pdfDoc.getPageIndex(dest[0]);
+          } else {
+            console.warn('Unsupported destination format:', dest);
+            return;
+          }
+          pdfViewer.currentPageNumber = pageIndex + 1;
+        }
+      } catch (err) {
+        console.error('Error navigating link:', err);
+      }
+    });
+
+    // Back button handler
+    document.getElementById('backButton').addEventListener('click', async () => {
+        await window.electronAPI.backToApp(currentPage);
+    });
+
+    // Toolbar button handlers
+    document.getElementById('nextPage').addEventListener('click', () => {
+      if (pdfDoc && currentPage < pdfDoc.numPages) {
+        currentPage++;
+        pdfViewer.currentPageNumber = currentPage;
+      }
+    });
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (pdfDoc && currentPage > 1) {
+        currentPage--;
+        pdfViewer.currentPageNumber = currentPage;
+      }
+    });
+
+    document.getElementById('zoomIn').addEventListener('click', () => {
+      currentScale = Math.min(currentScale + 0.25, 3);
+      pdfViewer.currentScale = currentScale;
+    });
+
+    document.getElementById('zoomOut').addEventListener('click', () => {
+      currentScale = Math.max(currentScale - 0.25, 0.5);
+      pdfViewer.currentScale = currentScale;
+    });
+
+    // TOC open/close functionality
+    const toc = document.getElementById('toc');
+    const openTocButton = document.getElementById('openToc');
+    const closeTocButton = document.getElementById('closeToc');
+
+    openTocButton.addEventListener('click', () => {
+      toc.classList.add('expanded');
+      // Do not hide openTocButton
+    });
+
+    closeTocButton.addEventListener('click', () => {
+      toc.classList.remove('expanded');
+    });
+
+    // Recursive TOC builder
+    async function buildTOC(items) {
+      const ul = document.createElement('ul');
+      for (const item of items) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#';
+        a.textContent = item.title || 'Untitled';
+
+        a.addEventListener('click', async (e) => {
+          e.preventDefault();
+          try {
+            if (item.dest) {
+              let pageIndex;
+              if (typeof item.dest === 'string') {
+                const dest = await pdfDoc.getDestination(item.dest);
+                if (dest && Array.isArray(dest) && dest[0]) {
+                  pageIndex = await pdfDoc.getPageIndex(dest[0]);
+                } else {
+                  console.warn('Invalid string destination:', item.dest);
+                  return;
+                }
+              } else if (Array.isArray(item.dest) && item.dest[0]) {
+                pageIndex = await pdfDoc.getPageIndex(item.dest[0]);
+              } else {
+                console.warn('Unsupported destination format:', item.dest);
+                return;
+              }
+              pdfViewer.currentPageNumber = pageIndex + 1;
+            } else if (item.url) {
+              window.open(item.url, '_blank');
+            } else {
+              console.warn('No destination or URL for TOC item:', item);
+            }
+          } catch (err) {
+            console.error('Error navigating TOC:', err);
+          }
+        });
+
+        li.appendChild(a);
+
+        if (item.items && item.items.length > 0) {
+          li.appendChild(await buildTOC(item.items));
+        }
+
+        ul.appendChild(li);
+      }
+      return ul;
+    }
+  </script>
+</body>
+</html>
