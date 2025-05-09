@@ -147,21 +147,19 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 			const thumbnailPath = renderPDFThumbnail(pdfPath);
 			const image = thumbnailPath ? `data:image/png;base64,${fs.readFileSync(thumbnailPath).toString('base64')}` : null;
 
-			console.log(thumbnailPath);
 			return {
 				path: path.join(foldersPath, pdf.name),
-				name: pdf.name,
+				name: pdfDoc.getTitle() ? pdfDoc.getTitle() : pdf.name,
 				image: image,
 				author: pdfDoc.getAuthor(),
 				progress: Math.floor(100 * (bookmark/pageCount)),
 				bookmark: bookmark || 0
-				// image: await renderPdfThumbnail(path.join(foldersPath, pdf.name))
 			};
 		} catch (err) {
 			console.error(`Failed to process ${pdf.name}:`, err);
 			return {
 				path: path.join(foldersPath, pdf.name),
-				name: pdf.name,
+				name:  pdfDoc.getTitle() ? pdfDoc.getTitle() : pdf.name,
 				author: pdfDoc.getAuthor(),
 				progress: 0,
 				bookmark: 0,
@@ -171,6 +169,23 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 	}));
 
 	return pdfData;
+}
+
+async function updateBook(pdfPath, book) {
+	const pdfBytes = fs.readFileSync(pdfPath);
+	const pdfDoc = await PDFDocument.load(pdfBytes);
+	console.log(book);
+	console.log(pdfPath);
+
+	pdfDoc.setTitle(book.title);
+
+
+	const modifiedPdfBytes = await pdfDoc.save();
+
+	const fd = fs.openSync(pdfPath, 'w');
+	fs.writeSync(fd, modifiedPdfBytes);
+	fs.fsyncSync(fd);
+	fs.closeSync(fd);
 }
 
 async function getConfigurationFilePath() {
@@ -190,8 +205,6 @@ async function setBookmark(pageNumber) {
 
 		// Save the modified PDF
 		const modifiedPdfBytes = await pdfDoc.save();
-
-		console.log(pdfDoc.getKeywords());
 
 		// Write it back to the same file
 		const fd = fs.openSync(currentPdfPath, 'w');
@@ -225,6 +238,8 @@ function createWindow() {
   });
 }
 
+
+
 app.whenReady().then(createWindow);
 
 ipcMain.handle('get-folders-children', async (event, folderPath, folder) => {
@@ -255,14 +270,15 @@ ipcMain.handle('get-folders-pdfs', async (event, foldersPath) => {
     return await getFoldersPDFs(foldersPath);  // Calling the extracted function
 });
 
+ipcMain.handle('update-book', async (event, pdfPath, book) => {
+    return await updateBook(pdfPath, book);  // Calling the extracted function
+});
+
 ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber) => {
-	// console.log(pageNumber);
+	currentPdfPath = pdfPath;
 	try {
-	  const fullPath = path.join(currentFolder, pdfPath);
-	  currentPdfPath = fullPath;
-	  const pdfUrl = `file://${fullPath}#page=${pageNumber}`;
-	  console.log(pdfUrl);
-	  if (!fs.existsSync(fullPath)) {
+	  const pdfUrl = `file://${pdfPath}#page=${pageNumber}`;
+	  if (!fs.existsSync(pdfPath)) {
 		throw new Error('PDF file does not exist');
 	  }
 	  // Load custom PDF viewer with query parameters
@@ -282,6 +298,7 @@ ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber) => 
 
 	try {
 	  if (process.env.NODE_ENV === 'development') {
+		// mainWindow.loadURL('http://localhost:5173/');
 		mainWindow.loadURL('http://localhost:5173/');
 	  } else {
 		mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));

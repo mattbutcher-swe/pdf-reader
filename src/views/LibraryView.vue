@@ -5,6 +5,8 @@ import SettingsMenu from '../components/SettingsMenu.vue';
 import BookListItem from '../components/BookListItem.vue';
 
 const pdfs = ref<Object[]>([]);
+let localPdfs = ref(pdfs.value);
+
 const currentFolder = ref<String>("");
 const vcardVariant = "flat";
 
@@ -40,6 +42,7 @@ const fetchPDFs = async () => {
 
 const setPDFs = async () => {
   pdfs.value = await fetchPDFs();
+  localPdfs.value = pdfs.value;
   currentFolder.value = await window.electronAPI.getHome();
 }
 
@@ -124,6 +127,34 @@ function scrollProxy(e: WheelEvent | TouchEvent | KeyboardEvent) {
 
 }
 
+function fuzzySearch(search) {
+  // if (search.target.value.length == 0) {
+  //   return;
+  // }
+
+  localPdfs.value = pdfs.value;
+
+
+  const lowerSearch = search.target.value.toLowerCase();
+
+  localPdfs.value = localPdfs.value.filter(pdf => {
+    let i = 0;
+    const lowerItem = pdf.name.toLowerCase();
+
+    for (let char of lowerItem) {
+      if (char === lowerSearch[i]) {
+        i++;
+      }
+      if (i === lowerSearch.length) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
+
+
 
 setPDFs();
 
@@ -132,8 +163,13 @@ setPDFs();
 <template>
   <main>
     <v-card class="h-screen d-flex flex-column" :variant="vcardVariant">
-      <div class="d-flex justify-end settings-wrapper pa-7">
-        <SettingsMenu />
+      <div class="d-flex pa-7">
+        <div class="d-flex justify start">
+          <v-text-field @input="fuzzySearch" class="text-primary pr-2" placeholder="Filter" variant="outlined" :width="150"></v-text-field>
+        </div>
+        <div class="d-flex flex-grow-1 justify-end settings-wrapper">
+          <SettingsMenu />
+        </div>
       </div>
       <v-container class="d-flex justify-center">
         <div class="align-center">
@@ -150,7 +186,7 @@ setPDFs();
       <!-- Book Grid -->
       <v-container class="flex-grow-1 overflow-y-auto pa-2" @wheel.prevent="scrollProxy" id="book-grid" fluid>
         <v-row class="h-100 book-wrapper-row" no-gutters>
-          <v-col class="book-wrapper pa-5 h-50" v-for="(item, index) in pdfs" :key="index" cols="12" sm="6" md="4"  lg="3">
+          <v-col class="book-wrapper pa-5 h-50" v-for="(item, index) in localPdfs" :key="index" cols="12" sm="6" md="4"  lg="3">
             <div class="h-100 w-100">
               <BookListItem :bookDetails="item" :currentFolder="currentFolder" />
             </div>

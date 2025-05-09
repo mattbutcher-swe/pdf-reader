@@ -8,7 +8,8 @@ export interface IElectronAPI {
     getFoldersPDFs: (foldersPath: string) => Promise<string[]>,
     openPDF: (pdfPath: string, currentFolder: string, pageNumber: string) => void,
     backToApp: (pageNumber: string) => void,
-    getPageNumber: () => Promise<object>
+    getPageNumber: () => Promise<object>,
+    updateBook: (pdfPath: string, book: object) => void
   }
   
   declare global {

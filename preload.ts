@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFoldersPDFs: (foldersPath) => ipcRenderer.invoke('get-folders-pdfs', foldersPath),
   openPDF: (pdfPath, currentFolder, pageNumber) => ipcRenderer.invoke('open-pdf', pdfPath, currentFolder, pageNumber),
   backToApp: (pageNumber) => ipcRenderer.invoke('back-to-app', pageNumber),
-  getPageNumber: () => ipcRenderer.invoke('get-page-number')
+  getPageNumber: () => ipcRenderer.invoke('get-page-number'),
+  updateBook: (pdfPath, book) => ipcRenderer.invoke('update-book', pdfPath, book)
 });
