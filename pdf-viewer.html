@@ -170,7 +170,10 @@
         <button id="openToc">TOC</button>
         <button id="prevPage">Previous</button>
         <button id="nextPage">Next</button>
-        <span>Page: <span id="currentPage">1</span> / <span id="totalPages">?</span></span>
+        <span>Page: <input id="currentPage" size="5" value="1">
+          <!-- <span id="currentPage">1</span>  -->
+          / <span id="totalPages">?</span>
+        </span>
         <button id="zoomOut">-</button>
         <button id="zoomIn">+</button>
       </div>
@@ -220,8 +223,6 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
 
     let pdfDoc = null;
 
-    console.log(pageNumber);
-
     let currentPage = pageNumber;
 
     let currentScale = 1.5;
@@ -240,11 +241,11 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
 
         linkService.setDocument(pdfDoc);
         pdfViewer.currentScale = currentScale;
-        currentPageDisplay.textContent = currentPage;
+        currentPageDisplay.value = currentPage;
 
         eventBus.on('pagesinit', () => {
           pdfViewer.currentPageNumber = pageNumber;
-          currentPageDisplay.textContent = pageNumber;
+          currentPageDisplay.value = pageNumber;
         });
 
         // Load and render the table of contents
@@ -270,7 +271,7 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     // Update page number on change
     eventBus.on('pagechanging', e => {
       currentPage = e.pageNumber;
-      currentPageDisplay.textContent = currentPage;
+      currentPageDisplay.value = currentPage;
     });
 
     // Handle link clicks for in-PDF annotations
@@ -313,6 +314,7 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     document.getElementById('nextPage').addEventListener('click', () => {
       if (pdfDoc && currentPage < pdfDoc.numPages) {
         currentPage++;
+        document.getElementById('currentPage').value = currentPage;
         pdfViewer.currentPageNumber = currentPage;
       }
     });
@@ -320,9 +322,15 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     document.getElementById('prevPage').addEventListener('click', () => {
       if (pdfDoc && currentPage > 1) {
         currentPage--;
+        document.getElementById('currentPage').value = currentPage;
         pdfViewer.currentPageNumber = currentPage;
       }
     });
+
+    document.getElementById('currentPage').addEventListener('change', (e) => {
+      currentPage = Number(e.target.value);
+      pdfViewer.currentPageNumber = currentPage;
+    })
 
     document.getElementById('zoomIn').addEventListener('click', () => {
       currentScale = Math.min(currentScale + 0.25, 3);
