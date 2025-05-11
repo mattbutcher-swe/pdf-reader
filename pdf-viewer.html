@@ -185,16 +185,22 @@
 
   <script>
     // Get PDF URL from query parameter
-    console.log(window.location);
     const urlParams = new URLSearchParams(window.location.search);
     const url = decodeURIComponent(urlParams.get('pdfUrl') || '');
 
     const encodedPdfUrl = urlParams.get("pdfUrl");
-const decodedPdfUrl = decodeURIComponent(encodedPdfUrl || '');
+    const decodedPdfUrl = decodeURIComponent(encodedPdfUrl || '');
 
-// Step 2: Extract the page number from the decoded URL's hash
-const pageMatch = decodedPdfUrl.match(/[#&?]page=(\d+)/);
-const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
+    // Step 2: Extract the page number from the decoded URL's hash
+    const pageMatch = decodedPdfUrl.match(/[#&?]page=(\d+)/);
+    const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
+
+    // Extract the currentscale parameter from the URL
+    const scaleMatch = decodedPdfUrl.match(/[#&?]currentScale=([\d.]+)/);
+    let currentScale = scaleMatch ? parseFloat(scaleMatch[1]) : 1.0; // default to 1.0 if not found
+
+    console.log('currentScale: ' + currentScale);
+
     // For testing, you can uncomment the line below with a sample PDF
     // const url = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey.pdf';
 
@@ -224,8 +230,6 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
     let pdfDoc = null;
 
     let currentPage = pageNumber;
-
-    let currentScale = 1.5;
 
     const currentPageDisplay = document.getElementById('currentPage');
     const totalPagesDisplay = document.getElementById('totalPages');
@@ -307,7 +311,7 @@ const pageNumber = pageMatch ? parseInt(pageMatch[1], 10) : 1;
 
     // Back button handler
     document.getElementById('backButton').addEventListener('click', async () => {
-        await window.electronAPI.backToApp(currentPage);
+        await window.electronAPI.backToApp(currentPage, currentScale);
     });
 
     // Toolbar button handlers

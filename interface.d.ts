@@ -6,8 +6,8 @@ export interface IElectronAPI {
     setHome: (currentPath: string|null) => Promise<boolean>,
     getHome: () => Promise<string>,
     getFoldersPDFs: (foldersPath: string) => Promise<string[]>,
-    openPDF: (pdfPath: string, currentFolder: string, pageNumber: string) => void,
-    backToApp: (pageNumber: string) => void,
+    openPDF: (pdfPath: string, currentFolder: string, pageNumber: string, currentScale) => void,
+    backToApp: (pageNumber: string, currentScale) => void,
     getPageNumber: () => Promise<object>,
     updateBook: (pdfPath: string, book: object) => void
   }

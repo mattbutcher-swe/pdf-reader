@@ -103,13 +103,6 @@ async function getHome() {
 	}
   }
 
-//   async function getFoldersPDFs(foldersPath) {
-// 		let pdfs = fs.readdirSync(foldersPath, { withFileTypes: true });
-// 		pdfs = pdfs.filter(pdf => (!pdf.isDirectory() && path.extname(pdf.name) == ".pdf"));
-// 		pdfs = pdfs.map(pdf => pdf.name);
-// 		return pdfs;
-//   }
-
 function generateThumbnail(pdfPath, thumbnailPath) {
 	try {
 	  const command = `qlmanage -t -s 300 -o "${path.dirname(thumbnailPath)}" "${pdfPath}" >/dev/null 2>&1`;
@@ -138,11 +131,19 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 			const pdfDoc = await PDFDocument.load(pdfBytes);
 			const pageCount = pdfDoc.getPageCount();
 
-			const keywords = pdfDoc.getKeywords();
+			let keywords = pdfDoc.getKeywords();
 			let bookmark = null;
+			let currentScale = null;
 
 			if (keywords) {
-					bookmark = keywords.split(":")[1];
+				let keywordsList = keywords.split(",");
+
+				if (keywordsList.length > 0) {
+					bookmark = keywordsList[0].split(":")[1];
+				}
+				if (keywordsList.length > 1) {
+					currentScale = keywordsList[1].split(":")[1];
+				}
 			}
 			const thumbnailPath = renderPDFThumbnail(pdfPath);
 			const image = thumbnailPath ? `data:image/png;base64,${fs.readFileSync(thumbnailPath).toString('base64')}` : null;
@@ -153,7 +154,8 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 				image: image,
 				author: pdfDoc.getAuthor(),
 				progress: Math.floor(100 * (bookmark/pageCount)),
-				bookmark: bookmark || 0
+				bookmark: bookmark || 0,
+				currentScale: currentScale || 0
 			};
 		} catch (err) {
 			console.error(`Failed to process ${pdf.name}:`, err);
@@ -163,6 +165,7 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 				author: pdfDoc.getAuthor(),
 				progress: 0,
 				bookmark: 0,
+				currentScale: null,
 				error: true
 			};
 		}
@@ -174,11 +177,7 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 async function updateBook(pdfPath, book) {
 	const pdfBytes = fs.readFileSync(pdfPath);
 	const pdfDoc = await PDFDocument.load(pdfBytes);
-	console.log(book);
-	console.log(pdfPath);
-
 	pdfDoc.setTitle(book.title);
-
 
 	const modifiedPdfBytes = await pdfDoc.save();
 
@@ -194,23 +193,23 @@ async function getConfigurationFilePath() {
 	return path.join(appDataPath, "library_home.txt");
 }
 
-async function setBookmark(pageNumber) {
+async function setMetadata(pageNumber, currentScale) {
 		// Read the PDF file
 		const pdfBytes = fs.readFileSync(currentPdfPath);
 		const pdfDoc = await PDFDocument.load(pdfBytes);
 		
-		let bookmark = [`bookmark:${pageNumber}`];
+		let metadata = [`bookmark:${pageNumber}, currentScale:${currentScale}`];
 	
-		pdfDoc.setKeywords(bookmark);
+		pdfDoc.setKeywords(metadata);
 
 		// Save the modified PDF
 		const modifiedPdfBytes = await pdfDoc.save();
 
 		// Write it back to the same file
 		const fd = fs.openSync(currentPdfPath, 'w');
-fs.writeSync(fd, modifiedPdfBytes);
-fs.fsyncSync(fd); // <-- Forces write to disk
-fs.closeSync(fd);
+		fs.writeSync(fd, modifiedPdfBytes);
+		fs.fsyncSync(fd); // <-- Forces write to disk
+		fs.closeSync(fd);
 		// fs.writeFileSync(currentPdfPath, modifiedPdfBytes);
 }
 
@@ -228,7 +227,7 @@ function createWindow() {
   });
 
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173/');
+    mainWindow.loadURL('http://localhost:5174/');
   } else {
     mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
@@ -274,10 +273,10 @@ ipcMain.handle('update-book', async (event, pdfPath, book) => {
     return await updateBook(pdfPath, book);  // Calling the extracted function
 });
 
-ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber) => {
+ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber, currentScale) => {
 	currentPdfPath = pdfPath;
 	try {
-	  const pdfUrl = `file://${pdfPath}#page=${pageNumber}`;
+	  const pdfUrl = `file://${pdfPath}#page=${pageNumber}&currentScale=${currentScale}`;
 	  if (!fs.existsSync(pdfPath)) {
 		throw new Error('PDF file does not exist');
 	  }
@@ -293,13 +292,13 @@ ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber) => 
 	}
   });
   
-  ipcMain.handle('back-to-app', async (event, pageNumber) => {
-	await setBookmark(pageNumber);
+  ipcMain.handle('back-to-app', async (event, pageNumber, currentScale) => {
+	await setMetadata(pageNumber, currentScale);
 
 	try {
 	  if (process.env.NODE_ENV === 'development') {
 		// mainWindow.loadURL('http://localhost:5173/');
-		mainWindow.loadURL('http://localhost:5173/');
+		mainWindow.loadURL('http://localhost:5174/');
 	  } else {
 		mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
 	  }

@@ -8,8 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setHome: (currentPath) => ipcRenderer.invoke('set-home', currentPath),
   getHome: () => ipcRenderer.invoke('get-home'),
   getFoldersPDFs: (foldersPath) => ipcRenderer.invoke('get-folders-pdfs', foldersPath),
-  openPDF: (pdfPath, currentFolder, pageNumber) => ipcRenderer.invoke('open-pdf', pdfPath, currentFolder, pageNumber),
-  backToApp: (pageNumber) => ipcRenderer.invoke('back-to-app', pageNumber),
+  openPDF: (pdfPath, currentFolder, pageNumber, currentScale) => ipcRenderer.invoke('open-pdf', pdfPath, currentFolder, pageNumber, currentScale),
+  backToApp: (pageNumber, currentScale) => ipcRenderer.invoke('back-to-app', pageNumber, currentScale),
   getPageNumber: () => ipcRenderer.invoke('get-page-number'),
   updateBook: (pdfPath, book) => ipcRenderer.invoke('update-book', pdfPath, book)
 });

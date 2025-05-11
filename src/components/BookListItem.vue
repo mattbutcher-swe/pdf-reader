@@ -5,7 +5,7 @@
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
-    }" :key="bookDetails.name" @click="openPDF(bookDetails.path, bookDetails.bookmark)">
+    }" :key="bookDetails.name" @click="openPDF(bookDetails.path, bookDetails.bookmark, bookDetails.currentScale)">
         <div class="d-flex flex-column h-100 w-100">
             <div class="d-flex w-100 justify-end">
                 <EditBookDialog v-model:title="bookDetails.name" v-model:pdf-path="bookDetails.path"></EditBookDialog>
@@ -24,9 +24,9 @@ import EditBookDialog from '../components/EditBookDialog.vue';
 
 const { bookDetails, currentFolder } = defineProps(['bookDetails', 'currentFolder']);
 
-const openPDF = async (pdfName, pageNumber) => {
+const openPDF = async (pdfName, pageNumber, currentScale) => {
     try {
-        await window.electronAPI.openPDF(pdfName, currentFolder, pageNumber);
+        await window.electronAPI.openPDF(pdfName, currentFolder, pageNumber, currentScale);
     } catch (err) {
         console.error('Error opening PDF:', err);
     }
