@@ -155,7 +155,7 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 				author: pdfDoc.getAuthor(),
 				progress: Math.floor(100 * (bookmark/pageCount)),
 				bookmark: bookmark || 0,
-				currentScale: currentScale || 0
+				currentScale: currentScale || 1
 			};
 		} catch (err) {
 			console.error(`Failed to process ${pdf.name}:`, err);
@@ -165,7 +165,7 @@ function generateThumbnail(pdfPath, thumbnailPath) {
 				author: pdfDoc.getAuthor(),
 				progress: 0,
 				bookmark: 0,
-				currentScale: null,
+				currentScale: 1,
 				error: true
 			};
 		}
