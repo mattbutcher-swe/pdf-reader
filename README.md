@@ -22,13 +22,8 @@ npm install
 ```
 
 ### 3. Run the app
-Execute 
 ```
-npm run dev
+npm run start
 ```
-and
-```
-npm run electron
-```
-in separate shell instances.
+
 

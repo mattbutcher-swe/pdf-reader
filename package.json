@@ -15,7 +15,7 @@
     "format": "prettier --write src/",
     "dev": "vite",
     "electron": "NODE_ENV=development electron .",
-    "start": "npm run dev && npm run electron"
+    "start": "npm run dev & npm run electron"
   },
   "main": "main.js",
   "dependencies": {
