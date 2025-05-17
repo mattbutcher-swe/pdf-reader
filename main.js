@@ -298,7 +298,7 @@ ipcMain.handle('open-pdf', async (event, pdfPath, currentFolder, pageNumber, cur
 	try {
 	  if (process.env.NODE_ENV === 'development') {
 		// mainWindow.loadURL('http://localhost:5173/');
-		mainWindow.loadURL('http://localhost:5174/');
+		mainWindow.loadURL('http://localhost:5173/');
 	  } else {
 		mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
 	  }
