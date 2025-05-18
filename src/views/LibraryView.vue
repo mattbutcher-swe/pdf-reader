@@ -56,8 +56,6 @@ function getNextOutOfViewItem(container) {
 
     // Check if the element is below the visible area (for vertical scrolling)
     if (childRect.top > containerRect.top) {
-      console.log("book bottom:" + childRect.bottom);
-      console.log("container bottom:" + containerRect.bottom);
       return child;
     }
   }
