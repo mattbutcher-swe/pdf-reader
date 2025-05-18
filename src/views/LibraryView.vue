@@ -49,20 +49,17 @@ const setPDFs = async () => {
 function getNextOutOfViewItem(container) {
   const children = container.querySelectorAll('.book-wrapper');
 
-  for (let i = 0; i < children.length; i++) {
+  for (let i = children.length - 1; i >= 0; i++) {
     const child = children[i];
     const childRect = child.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
 
     // Check if the element is below the visible area (for vertical scrolling)
-    if (childRect.top > containerRect.bottom || childRect.bottom > containerRect.bottom) {
+    if (childRect.top > containerRect.top) {
+      console.log("book bottom:" + childRect.bottom);
+      console.log("container bottom:" + containerRect.bottom);
       return child;
     }
-
-    // For horizontal scrolling, use:
-    // if (childRect.left > containerRect.right || childRect.right > containerRect.right) {
-    //   return child;
-    // }
   }
 
   return null; // All items are in view
