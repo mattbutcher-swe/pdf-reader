@@ -49,36 +49,50 @@ const setPDFs = async () => {
 function getNextOutOfViewItem(container) {
   const children = container.querySelectorAll('.book-wrapper');
 
-  for (let i = children.length - 1; i >= 0; i++) {
-    const child = children[i];
-    const childRect = child.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    // Check if the element is below the visible area (for vertical scrolling)
-    if (childRect.top > containerRect.top) {
-      return child;
-    }
-  }
-
-  return null; // All items are in view
-}
-
-function getPreviousOutOfViewItem(container, selector = '.book-wrapper') {
-  const children = Array.from(container.querySelectorAll(selector));
-  const scrollTop = container.scrollTop;
+  let next = null;
 
   for (let i = children.length - 1; i >= 0; i--) {
     const child = children[i];
-    const offsetTop = child.offsetTop;
 
-    // If the item's bottom is above the visible top of the container
-    if (child.offsetTop < scrollTop) {
-      return child;
+    if (!isInViewport(child)) {
+      next = child;
+    } else {
+      return next;
     }
   }
 
-  return null; // Nothing out of view above
+  return next;
 }
+
+function getPreviousOutOfViewItem(container, selector = '.book-wrapper') {
+  const children = container.querySelectorAll('.book-wrapper');
+
+  let previous = null;
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+
+    if (!isInViewport(child)) {
+      previous = child;
+    } else {
+      return previous;
+    }
+  }
+
+  return previous;
+}
+
+function isInViewport(element) {
+  const rect = element.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+  );
+}
+
+
 
 function scrollDown() {
   const container = document.getElementById('book-grid');
@@ -90,8 +104,6 @@ function scrollDown() {
   }
 
   observeFadeOutOnScroll(); // Run after DOM is updated
-
-
 }
 
 function scrollUp() {
@@ -103,9 +115,6 @@ function scrollUp() {
   }
 
   observeFadeOutOnScroll(); // Run after DOM is updated
-
-
-
 }
 
 function scrollProxy(e: WheelEvent | TouchEvent | KeyboardEvent) {
