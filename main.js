@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const { PDFDocument } = require('pdf-lib');
 const { execSync } = require('child_process');
+const { Menu, clipboard } = require('electron');
 
 let mainWindow;
 let currentPdfPath;
@@ -231,6 +232,22 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, 'dist/index.html'));
   }
+
+  mainWindow.webContents.on('context-menu', async (event, params) => {
+	const menu = Menu.buildFromTemplate([
+	  {
+		label: 'Copy',
+		click: async () => {
+		  const selectedText = await mainWindow.webContents.executeJavaScript('window.getSelection().toString()');
+		  if (selectedText) {
+			clipboard.writeText(selectedText);
+		  }
+		},
+		enabled: params.selectionText.trim().length > 0
+	  }
+	]);
+	menu.popup();
+  });
 
   mainWindow.on('closed', function () {
     mainWindow = null;
